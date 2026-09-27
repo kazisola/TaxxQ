@@ -12,5 +12,7 @@ class Settings(BaseSettings):
     )
 
     groq_api_key: SecretStr
+    google_api_key: SecretStr
+    pinecone_api_key: SecretStr
 
 settings = Settings() # type: ignore
