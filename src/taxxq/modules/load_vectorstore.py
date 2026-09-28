@@ -41,10 +41,26 @@ def load_vectorstore(uploaded_files):
     embed_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
     file_paths = []
 
-    # 1. Upload
+    # 1. Upload docs
     for file in uploaded_files:
         save_path = Path(UPLOAD_DIR)/file.filename
         with open(save_path, "wb") as f:
             f.write(file.file.read())
 
         file_paths.append(save_path)
+
+    #  2. Split docs
+    for file_path in file_paths:
+        loader = PyPDFLoader(file_path)
+        documents = loader.load()
+
+        splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+        chunks = splitter.split_documents(documents)
+
+        texts = [chunk.page_content for chunk in chunks]
+        metadata = [chunk.metadata for chunk in chunks]
+        ids = [f"{Path(file_path).stem}-{i}" for i in range(len(chunks))]
+
+        # 3. Embed chunks
+        print("Embedding...")
+        embeddings = embed_model.embed_documents(texts)
