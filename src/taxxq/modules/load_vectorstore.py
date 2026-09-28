@@ -5,6 +5,7 @@ from pinecone import Pinecone, ServerlessSpec
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from tqdm import tqdm
 from taxxq.core.config import settings
 
 PINECONE_ENV = "us-east-1"
@@ -49,11 +50,11 @@ def load_vectorstore(uploaded_files):
 
         file_paths.append(save_path)
 
-    #  2. Split docs
     for file_path in file_paths:
         loader = PyPDFLoader(file_path)
         documents = loader.load()
 
+        #  2. Split docs
         splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
         chunks = splitter.split_documents(documents)
 
@@ -64,3 +65,11 @@ def load_vectorstore(uploaded_files):
         # 3. Embed chunks
         print("Embedding...")
         embeddings = embed_model.embed_documents(texts)
+
+        # 4. Upsert
+        with tqdm(total=len(embeddings), desc="Upserting to Pinecone") as progress:
+            vectors = [{ "id": vector_id, "values": embedding, "metadata": meta } for vector_id, embedding, meta in zip(ids, embeddings, metadata)]
+            index.upsert(vectors=vectors)
+            progress.update(len(embeddings))
+
+        print(f"Upload completed for {file_path}")
