@@ -7,7 +7,7 @@ from taxxq.core.config import settings
 def get_llm_chain(retriever):
     llm = ChatGroq(
         api_key=settings.groq_api_key,
-        model="llama3-70b-8192"
+        model="openai/gpt-oss-120b"
     )
 
     prompt = PromptTemplate(
