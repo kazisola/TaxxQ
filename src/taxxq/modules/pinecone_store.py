@@ -1,75 +1,45 @@
-import os
-import time
-from pathlib import Path
 from pinecone import Pinecone, ServerlessSpec
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from tqdm import tqdm
+from langchain_pinecone import PineconeVectorStore
 from taxxq.core.config import settings
+from taxxq.modules.embeddings import EMBEDDING_DIMENSION, get_embeddings
 
-PINECONE_ENV = "us-east-1"
 PINECONE_INDEX_NAME = "taxxq"
+PINECONE_REGION = "us-east-1"
 
-UPLOAD_DIR = "./upload_docs"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-# Inititalize Pinecone
-pinecone = Pinecone(api_key=settings.pinecone_api_key.get_secret_value())
-spec = ServerlessSpec(
-    cloud="aws",
-    region=PINECONE_ENV
-)
-
-existing_indexes = [i["name"] for i in pinecone.list_indexes()]
-
-if PINECONE_INDEX_NAME not in existing_indexes:
-    pinecone.create_index(
-        name=PINECONE_INDEX_NAME,
-        dimension=1024,
-        metric="cosine",
-        spec=spec
+def get_pinecone():
+    return Pinecone(
+        api_key=settings.pinecone_api_key.get_secret_value()
     )
 
-    while not pinecone.describe_index(PINECONE_INDEX_NAME).status["ready"]:
-        time.sleep(1)
+def ensure_pinecone():
+    pc = get_pinecone()
 
-index = pinecone.Index(PINECONE_INDEX_NAME)
+    existing_indexes = pc.list_indexes().names()
 
+    if PINECONE_INDEX_NAME not in existing_indexes:
+        pc.create_index(
+            name=PINECONE_INDEX_NAME,
+            dimension=EMBEDDING_DIMENSION,
+            metric="cosine",
+            spec=ServerlessSpec(
+                cloud="aws",
+                region=PINECONE_REGION
+            )
+        )
+    return pc
 
-# Load, split, embed and upsert PDF docs content
-def load_vectorstore(uploaded_files):
-    embed_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
-    file_paths = []
+def get_vector_store():
+    pc = ensure_pinecone()
+    embeddings = get_embeddings()
 
-    # 1. Upload docs
-    for file in uploaded_files:
-        save_path = Path(UPLOAD_DIR)/file.filename
-        with open(save_path, "wb") as f:
-            f.write(file.file.read())
+    return PineconeVectorStore(
+        pinecone_api_key=settings.pinecone_api_key.get_secret_value(),
+        index_name=PINECONE_INDEX_NAME,
+        embedding=embeddings
+    )
 
-        file_paths.append(save_path)
-
-    for file_path in file_paths:
-        loader = PyPDFLoader(file_path)
-        documents = loader.load()
-
-        #  2. Split docs
-        splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
-        chunks = splitter.split_documents(documents)
-
-        texts = [chunk.page_content for chunk in chunks]
-        metadata = [chunk.metadata for chunk in chunks]
-        ids = [f"{Path(file_path).stem}-{i}" for i in range(len(chunks))]
-
-        # 3. Embed chunks
-        print("Embedding...")
-        embeddings = embed_model.embed_documents(texts)
-
-        # 4. Upsert
-        with tqdm(total=len(embeddings), desc="Upserting to Pinecone") as progress:
-            vectors = [{ "id": vector_id, "values": embedding, "metadata": meta } for vector_id, embedding, meta in zip(ids, embeddings, metadata)]
-            index.upsert(vectors=vectors)
-            progress.update(len(embeddings))
-
-        print(f"Upload completed for {file_path}")
+def get_retriever():
+    vector_store = get_vector_store()
+    return vector_store.as_retriever(
+        search_kwargs={"k": 4}
+    )
