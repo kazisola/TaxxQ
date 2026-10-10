@@ -16,5 +16,11 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+@app.get("/health")
+def health():
+    return {
+        "status": "ok"
+    }
+
 # Middleware Exceptions
 app.middleware("http")(catch_exception_middleware)
