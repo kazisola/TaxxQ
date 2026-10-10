@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from taxxq.middlewares.exception_handlers import catch_exception_middleware
+from taxxq.modules.load_vectorstore import load_vectorstore
 
 app = FastAPI(
         title="TaxxQ",
@@ -20,6 +21,16 @@ app.add_middleware(
 def health():
     return {
         "status": "ok"
+    }
+
+@app.post("documents")
+def upload_docs(
+    files: list[UploadFile] = File(...)
+    ):
+    counts = load_vectorstore(files)
+    return {
+        "message": "Documents indexed successfully",
+        "counts": counts,
     }
 
 # Middleware Exceptions
