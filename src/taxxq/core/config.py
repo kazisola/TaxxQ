@@ -2,8 +2,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import SecretStr
 
 class Settings(BaseSettings):
-    app_name = "TaxxQ AI"
-    description = "Ask your tax queries to Uncle Sam!"
+    # app_name = "TaxxQ AI"
+    # description = "Ask your tax queries to Uncle Sam!"
 
     model_config = SettingsConfigDict(
         env_file=".env",
