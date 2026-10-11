@@ -1,4 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
+from typing import Annotated
 from fastapi.middleware.cors import CORSMiddleware
 from taxxq.middlewares.exception_handlers import catch_exception_middleware
 from taxxq.modules.load_vectorstore import load_vectorstore
@@ -9,7 +10,7 @@ from pydantic import BaseModel
 
 app = FastAPI(
         title="TaxxQ",
-        description="AI-Powered US Tax Query"
+        description="AI-Powered US Tax Query",
     )
 
 # CORS POLICY
@@ -36,7 +37,7 @@ def health():
 
 @app.post("/documents")
 def upload_docs(
-    files: list[UploadFile] = File(...)
+    files: Annotated[list[UploadFile], File(...)]
 ):
     counts = load_vectorstore(files)
     return {

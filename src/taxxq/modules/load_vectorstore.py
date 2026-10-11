@@ -20,7 +20,7 @@ def load_vectorstore(uploaded_files):
         # Save the uploaded files
         if not file.filename:
             raise ValueError("Uploaded file must have a filename")
-        if not file.filename.lowercase().endswith(".pdf"):
+        if not file.filename.lower().endswith(".pdf"):
             raise TypeError("Only PDF files are supported")
 
         file_path = UPLOAD_DIR / Path(file.filename).name
@@ -44,7 +44,7 @@ def load_vectorstore(uploaded_files):
         # Add metadata to chunks
         for chunk in chunks:
             chunk.metadata["source"] = file_path.name
-
+        print(f"Chunks ------------- {chunks}")
         # Documents > Embeddings > Pinecone
         vector_store.add_documents(documents=chunks)
 
