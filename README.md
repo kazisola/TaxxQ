@@ -1,4 +1,4 @@
-# TaxXQ 🇺🇸
+# TaxXQ
 
 **An AI-powered tax question-answering application built with Retrieval-Augmented Generation (RAG).**
 
