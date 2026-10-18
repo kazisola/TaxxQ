@@ -10,8 +10,8 @@ def load_vectorstore(uploaded_files):
     vector_store = get_vector_store()
 
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=100,
+        chunk_size=1000,
+        chunk_overlap=150,
     )
 
     total_chunks = 0
